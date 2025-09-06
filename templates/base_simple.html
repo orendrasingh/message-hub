@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Message Hub - Business Messaging Platform{% endblock %}</title>
+    
+    <!-- Bootstrap CSS for legacy templates -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Tailwind CSS for modern styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    {% block extra_head %}{% endblock %}
+    
+    <style>
+        /* Custom Shadcn-style components */
+        .card-shadow {
+            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+        }
+        .card-shadow-lg {
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .btn-messaging {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        }
+        .navbar-glass {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.95);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+        .nav-item:hover {
+            transform: translateY(-1px);
+            transition: all 0.2s ease;
+        }
+    </style>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8'
+                        },
+                        messaging: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Navigation -->
+    <nav class="navbar-glass sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo/Brand -->
+                <div class="flex items-center">
+                    <a href="{{ url_for('main.dashboard') if session.get('user_id') else url_for('main.landing') }}"
+                       class="flex items-center space-x-3 text-xl font-bold text-gray-900 hover:text-blue-600 transition-colors">
+                        <div class="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-comments text-white"></i>
+                        </div>
+                        <span>Message Hub</span>
+                    </a>
+                </div>
+                
+                <!-- Navigation Links -->
+                {% if session.get('user_id') %}
+                <div class="hidden md:flex items-center space-x-6">
+                    <a href="{{ url_for('main.dashboard') }}" 
+                       class="flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-700 hover:text-whatsapp-600 hover:bg-gray-100 transition-all">
+                        <i class="fas fa-tachometer-alt"></i>
+                        <span>Dashboard</span>
+                    </a>
+                    
+                    <a href="{{ url_for('contacts.list_contacts') }}" 
+                       class="flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-700 hover:text-blue-600 hover:bg-gray-100 transition-all">
+                        <i class="fas fa-address-book"></i>
+                        <span>Contacts</span>
+                    </a>
+                    <a href="{{ url_for('campaigns.send_single') }}" 
+                       class="flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-700 hover:text-blue-600 hover:bg-gray-100 transition-all">
+                        <i class="fas fa-message"></i>
+                        <span>Send Message</span>
+                    </a>
+                    <a href="{{ url_for('campaigns.bulk_campaign') }}" 
+                       class="flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-700 hover:text-blue-600 hover:bg-gray-100 transition-all">
+                        <i class="fas fa-paper-plane"></i>
+                        <span>Bulk Send</span>
+                    </a>
+                </div>
+                {% endif %}
+                
+                <!-- User Menu -->
+                <div class="flex items-center space-x-4">
+                    {% if session.get('user_id') %}
+                        <div class="relative">
+                            <button id="userMenuButton" class="flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-all">
+                                <div class="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                                    <i class="fas fa-user text-white text-sm"></i>
+                                </div>
+                                <span class="font-medium">{{ session.get('username', 'User') }}</span>
+                                <i class="fas fa-chevron-down text-xs"></i>
+                            </button>
+                            <div id="userDropdown" class="absolute right-0 mt-2 w-48 bg-white rounded-lg card-shadow-lg opacity-0 invisible transition-all duration-200 z-50">
+                                <div class="p-2">
+                                    <a href="{{ url_for('main.setup_whatsapp') }}" 
+                                       class="flex items-center space-x-2 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 transition-colors">
+                                        <i class="fas fa-cog"></i>
+                                        <span>Settings</span>
+                                    </a>
+                                    <hr class="my-2">
+                                    <a href="{{ url_for('auth.logout') }}" 
+                                       class="flex items-center space-x-2 px-3 py-2 rounded-md text-red-600 hover:bg-red-50 transition-colors">
+                                        <i class="fas fa-sign-out-alt"></i>
+                                        <span>Logout</span>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="flex items-center space-x-3">
+                            <a href="{{ url_for('auth.login') }}" 
+                               class="px-4 py-2 text-gray-700 hover:text-whatsapp-600 transition-colors">
+                                Login
+                            </a>
+                            <a href="{{ url_for('auth.register') }}" 
+                               class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors card-shadow">
+                                Register
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+                {% for category, message in messages %}
+                    <div class="mb-4 p-4 rounded-lg card-shadow {% if category == 'error' %}bg-red-50 text-red-800 border-l-4 border-red-500{% elif category == 'success' %}bg-green-50 text-green-800 border-l-4 border-green-500{% else %}bg-blue-50 text-blue-800 border-l-4 border-blue-500{% endif %}">
+                        <div class="flex items-center justify-between">
+                            <p class="font-medium">{{ message }}</p>
+                            <button onclick="this.parentElement.parentElement.style.display='none'" class="text-gray-400 hover:text-gray-600">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-gray-200 mt-16">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="text-center">
+                <p class="text-gray-600">
+                    &copy; 2025 Message Hub - Business Messaging Platform. All rights reserved.
+                </p>
+            </div>
+        </div>
+    </footer>
+    
+    <!-- Bootstrap JS for legacy templates -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- User Dropdown JavaScript -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const userMenuButton = document.getElementById('userMenuButton');
+            const userDropdown = document.getElementById('userDropdown');
+            
+            if (userMenuButton && userDropdown) {
+                // Toggle dropdown on button click
+                userMenuButton.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const isVisible = userDropdown.classList.contains('opacity-100');
+                    
+                    if (isVisible) {
+                        // Hide dropdown
+                        userDropdown.classList.remove('opacity-100', 'visible');
+                        userDropdown.classList.add('opacity-0', 'invisible');
+                    } else {
+                        // Show dropdown
+                        userDropdown.classList.remove('opacity-0', 'invisible');
+                        userDropdown.classList.add('opacity-100', 'visible');
+                    }
+                });
+                
+                // Close dropdown when clicking outside
+                document.addEventListener('click', function(e) {
+                    if (!userMenuButton.contains(e.target) && !userDropdown.contains(e.target)) {
+                        userDropdown.classList.remove('opacity-100', 'visible');
+                        userDropdown.classList.add('opacity-0', 'invisible');
+                    }
+                });
+                
+                // Close dropdown on escape key
+                document.addEventListener('keydown', function(e) {
+                    if (e.key === 'Escape') {
+                        userDropdown.classList.remove('opacity-100', 'visible');
+                        userDropdown.classList.add('opacity-0', 'invisible');
+                    }
+                });
+            }
+        });
+    </script>
+    
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

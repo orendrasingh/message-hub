@@ -1,0 +1,157 @@
+{% extends "base_simple.html" %}
+
+{% block title %}Setup WhatsApp - WhatsApp Automation{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-lg border-0 rounded-4 mt-4">
+                <div class="card-header bg-whatsapp text-white text-center p-4">
+                    <i class="fab fa-whatsapp fa-4x mb-3"></i>
+                    <h2>Welcome, {{ user.name }}!</h2>
+                    <p class="lead mb-0">Let's set up your WhatsApp automation</p>
+                </div>
+                
+                <div class="card-body p-4">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+                    
+                    <div class="instance-info text-center mb-4">
+                        <h4 class="text-primary">
+                            <i class="fas fa-server me-2"></i>
+                            Your WhatsApp Instance is Ready!
+                        </h4>
+                        <p class="mb-2">Instance Name: <code>{{ user.evolution_instance_name }}</code></p>
+                        <p class="text-muted">Your personal WhatsApp automation server has been created.</p>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card border-start border-success border-5 mb-3">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-start">
+                                        <div class="badge bg-success rounded-pill me-3 p-2">1</div>
+                                        <div>
+                                            <h5>Personal WhatsApp Instance Created</h5>
+                                            <p class="mb-0">We've automatically created your dedicated WhatsApp automation instance. This is your private server that will handle all your WhatsApp communications securely.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-12">
+                            <div class="card border-start border-warning border-5 mb-3">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-start">
+                                        <div class="badge bg-warning rounded-pill me-3 p-2">2</div>
+                                        <div>
+                                            <h5>Connect Your WhatsApp Account</h5>
+                                            <p class="mb-2">Next, you'll scan a QR code to link your WhatsApp account to this automation system. This connects your phone number to our secure server.</p>
+                                            <p class="mb-0"><small class="text-muted">Don't worry - we don't store your messages or personal data. The connection is end-to-end encrypted.</small></p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-12">
+                            <div class="card border-start border-info border-5 mb-4">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-start">
+                                        <div class="badge bg-info rounded-pill me-3 p-2">3</div>
+                                        <div>
+                                            <h5>Start Automating</h5>
+                                            <p class="mb-0">Once connected, you can import contacts, send bulk messages, track campaigns, and automate your WhatsApp communications with powerful features.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="text-center">
+                        <a href="{{ url_for('main.connect_whatsapp') }}" class="btn btn-whatsapp btn-lg px-5 py-3 rounded-pill">
+                            <i class="fas fa-qrcode me-2"></i>
+                            Connect WhatsApp Now
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .bg-whatsapp {
+        background: linear-gradient(135deg, #25d366 0%, #128c7e 100%) !important;
+    }
+</style>
+{% endblock %}
+                                <div class="step-card">
+                                    <div class="d-flex align-items-start">
+                                        <div class="step-number">2</div>
+                                        <div>
+                                            <h5>What's Next?</h5>
+                                            <p class="mb-3">Now you need to connect your WhatsApp account to this instance by scanning a QR code with your WhatsApp mobile app.</p>
+                                            <ul class="mb-0">
+                                                <li>Open WhatsApp on your phone</li>
+                                                <li>Go to Settings → Linked Devices</li>
+                                                <li>Tap "Link a Device"</li>
+                                                <li>Scan the QR code we'll show you</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-12">
+                                <div class="step-card">
+                                    <div class="d-flex align-items-start">
+                                        <div class="step-number">3</div>
+                                        <div>
+                                            <h5>Start Automating</h5>
+                                            <p class="mb-0">Once connected, you'll be able to:</p>
+                                            <ul class="mb-0">
+                                                <li>Import contacts via CSV</li>
+                                                <li>Send bulk messages</li>
+                                                <li>Manage your contact lists</li>
+                                                <li>Track message delivery</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="text-center mt-4">
+                            <a href="{{ url_for('main.connect_whatsapp') }}" class="btn-continue">
+                                <i class="fas fa-qrcode me-2"></i>
+                                Connect WhatsApp Now
+                            </a>
+                        </div>
+                        
+                        <div class="text-center mt-4">
+                            <small class="text-muted">
+                                <i class="fas fa-shield-alt me-1"></i>
+                                Your data is secure and private. We don't store your WhatsApp messages.
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

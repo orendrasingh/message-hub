@@ -1,0 +1,396 @@
+{% extends "base_simple.html" %}
+
+{% block title %}Bulk Send - WhatsApp Automation{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2"><i class="fas fa-broadcast-tower"></i> Bulk Send Messages</h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <a href="{{ url_for('contacts.upload_contacts') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-address-book"></i> View Contacts
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistics -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-primary">{{ stats.total if stats.total is not none else 0 }}</h3>
+                    <p class="card-text">Total Contacts</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-warning">{{ stats.pending if stats.pending is not none else 0 }}</h3>
+                    <p class="card-text">Pending</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-success">{{ stats.sent if stats.sent is not none else 0 }}</h3>
+                    <p class="card-text">Sent</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-danger">{{ stats.failed if stats.failed is not none else 0 }}</h3>
+                    <p class="card-text">Failed</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Compose Bulk Message Card -->
+    <div class="card">
+        <div class="card-header bg-light">
+            <h5 class="mb-0"><i class="fas fa-edit"></i> Compose Bulk Message</h5>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('campaigns.bulk_campaign') }}" enctype="multipart/form-data">
+                
+                <!-- Send To Section -->
+                <div class="mb-4">
+                    <label class="form-label fw-bold">Send To:</label>
+                    
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="radio" name="recipient_type" value="pending" id="sendToPending" checked>
+                        <label class="form-check-label" for="sendToPending">
+                            <strong>Pending Contacts Only</strong> ({{ stats.pending if stats.pending is not none else 0 }} contacts)
+                        </label>
+                    </div>
+                    
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="radio" name="recipient_type" value="all" id="sendToAll">
+                        <label class="form-check-label" for="sendToAll">
+                            <strong>All Contacts</strong> ({{ stats.total if stats.total is not none else 0 }} contacts) - Will resend to already sent contacts
+                        </label>
+                    </div>
+                    
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="radio" name="recipient_type" value="selected" id="sendToSelected">
+                        <label class="form-check-label" for="sendToSelected">
+                            <strong>Selected Contacts</strong> - Choose specific contacts
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Contact Selection Section (Will show when Selected Contacts is clicked) -->
+                <div id="contactSelectionSection" style="display: none; border: 2px solid #007bff; padding: 15px; margin-bottom: 20px; background: #f8f9fa;">
+                    <h6><i class="fas fa-check-square"></i> Select Contacts</h6>
+                    {% if contacts and contacts|length > 0 %}
+                    <div class="row">
+                        {% for contact in contacts %}
+                        <div class="col-md-6 mb-2">
+                            <div class="form-check">
+                                <input class="form-check-input contact-checkbox" 
+                                       type="checkbox" 
+                                       name="selected_contacts" 
+                                       value="{{ contact.phone }}" 
+                                       id="contact_{{ loop.index }}">
+                                <label class="form-check-label" for="contact_{{ loop.index }}">
+                                    <strong>{{ contact.name or 'Unknown' }}</strong><br>
+                                    <small class="text-muted">{{ contact.phone }}</small>
+                                </label>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="mt-3">
+                        <button type="button" class="btn btn-sm btn-primary" onclick="selectAllContacts()">Select All</button>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="selectNoneContacts()">Select None</button>
+                        <span class="ms-3"><strong id="selectedCount">0</strong> contacts selected</span>
+                    </div>
+                    {% else %}
+                    <p class="text-muted mb-0">No contacts available. <a href="{{ url_for('contacts.upload_contacts') }}">Upload contacts first</a>.</p>
+                    {% endif %}
+                </div>
+
+                <!-- Media Upload Section -->
+                <div class="mb-4">
+                    <label for="media_files" class="form-label fw-bold">
+                        <i class="fas fa-image"></i> Attach Media (Optional)
+                    </label>
+                    <div class="border rounded p-3" style="border: 2px dashed #ccc; background-color: #f8f9fa;">
+                        <input type="file" class="form-control" id="media_files" name="media_files" 
+                               accept="image/*,video/*" multiple onchange="previewBulkMedia(this)"
+                               style="cursor: pointer;">
+                        <div class="text-center mt-2">
+                            <i class="fas fa-cloud-upload-alt fa-2x text-muted"></i>
+                            <p class="mt-2 mb-1"><strong>Click to select multiple files</strong></p>
+                            <small class="text-muted">Hold Ctrl (Windows) or Cmd (Mac) to select multiple files</small>
+                        </div>
+                    </div>
+                    <div class="form-text mt-2">
+                        Supported formats: Images (PNG, JPG, GIF, WebP) up to 10MB, Videos (MP4, AVI, MOV) up to 50MB
+                        <br><strong>Multiple files supported</strong> - All selected media will be sent to each contact
+                    </div>
+                    
+                    <!-- Media Preview -->
+                    <div id="bulkMediaPreview" class="mt-2" style="display: none;">
+                        <div class="border rounded p-2">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span id="bulkMediaFileName" class="text-muted"></span>
+                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeBulkMedia()">
+                                    <i class="fas fa-times"></i> Remove All Media
+                                </button>
+                            </div>
+                            <div id="bulkMediaPreviewContent" class="mt-2" style="max-height: 300px; overflow-y: auto;">
+                                <div class="row g-2" id="bulkMediaGrid" style="margin: 0;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Message Content -->
+                <div class="mb-4">
+                    <label for="message" class="form-label fw-bold">
+                        <i class="fas fa-comment-dots"></i> Message Content <span class="text-muted">(Optional if media is attached)</span>
+                    </label>
+                    <textarea class="form-control" id="message" name="message" rows="6" 
+                              placeholder="Type your bulk message here or leave empty to send media only..."></textarea>
+                    <div class="form-text">
+                        Use variables: {name}, {first_name}, {phone}
+                        <br>When media is attached, this becomes the caption for the first media file.
+                    </div>
+                </div>
+
+                <!-- Delay -->
+                <div class="mb-4">
+                    <label for="delay" class="form-label fw-bold">
+                        <i class="fas fa-clock"></i> Delay Between Messages (seconds)
+                    </label>
+                    <select class="form-control" id="delay" name="delay">
+                        <option value="2" selected>2 seconds (Recommended)</option>
+                        <option value="3">3 seconds</option>
+                        <option value="5">5 seconds</option>
+                        <option value="10">10 seconds</option>
+                    </select>
+                </div>
+
+                <!-- Submit -->
+                <div class="text-center">
+                    <button type="submit" class="btn btn-success btn-lg px-5">
+                        <i class="fas fa-paper-plane"></i> Send Messages
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Page loaded - setting up contact selection');
+    
+    function updateCount() {
+        const checked = document.querySelectorAll('.contact-checkbox:checked').length;
+        const counter = document.getElementById('selectedCount');
+        if (counter) counter.textContent = checked;
+        console.log('Updated count:', checked);
+    }
+
+    // Radio button event listeners
+    document.getElementById('sendToPending').addEventListener('change', function() {
+        if (this.checked) {
+            document.getElementById('contactSelectionSection').style.display = 'none';
+            console.log('Hidden contact selection - pending selected');
+        }
+    });
+    
+    document.getElementById('sendToAll').addEventListener('change', function() {
+        if (this.checked) {
+            document.getElementById('contactSelectionSection').style.display = 'none';
+            console.log('Hidden contact selection - all selected');
+        }
+    });
+    
+    document.getElementById('sendToSelected').addEventListener('change', function() {
+        if (this.checked) {
+            document.getElementById('contactSelectionSection').style.display = 'block';
+            updateCount();
+            console.log('Shown contact selection - selected contacts');
+        }
+    });
+    
+    // Checkbox event listeners
+    document.querySelectorAll('.contact-checkbox').forEach(function(checkbox) {
+        checkbox.addEventListener('change', updateCount);
+    });
+    
+    // Form validation
+    document.querySelector('form').addEventListener('submit', function(e) {
+        const isSelected = document.getElementById('sendToSelected').checked;
+        if (isSelected) {
+            const checked = document.querySelectorAll('.contact-checkbox:checked').length;
+            if (checked === 0) {
+                e.preventDefault();
+                alert('Please select at least one contact.');
+                return false;
+            }
+        }
+        
+        const message = document.getElementById('message').value.trim();
+        const hasMedia = document.getElementById('media_files').files.length > 0;
+        
+        if (!message && !hasMedia) {
+            e.preventDefault();
+            alert('Please enter a message or select media files.');
+            return false;
+        }
+    });
+    
+    console.log('Setup complete');
+});
+
+// Global functions for contact selection
+function selectAllContacts() {
+    console.log('Select all clicked');
+    document.querySelectorAll('.contact-checkbox').forEach(function(cb) {
+        cb.checked = true;
+    });
+    const counter = document.getElementById('selectedCount');
+    if (counter) counter.textContent = document.querySelectorAll('.contact-checkbox').length;
+}
+
+function selectNoneContacts() {
+    console.log('Select none clicked');
+    document.querySelectorAll('.contact-checkbox').forEach(function(cb) {
+        cb.checked = false;
+    });
+    const counter = document.getElementById('selectedCount');
+    if (counter) counter.textContent = '0';
+}
+
+// Bulk media upload functionality
+function previewBulkMedia(input) {
+    console.log('File input triggered');
+    console.log('Input element:', input);
+    console.log('Input.files:', input.files);
+    console.log('Files length:', input.files.length);
+    
+    const files = Array.from(input.files);
+    console.log('Files array:', files);
+    
+    const preview = document.getElementById('bulkMediaPreview');
+    const fileName = document.getElementById('bulkMediaFileName');
+    const mediaGrid = document.getElementById('bulkMediaGrid');
+    const messageField = document.getElementById('message');
+    
+    if (files.length > 0) {
+        fileName.textContent = `${files.length} file(s) selected: ${files.map(f => f.name).join(', ')}`;
+        preview.style.display = 'block';
+        
+        // Remove required attribute from message field
+        messageField.removeAttribute('required');
+        
+        // Clear previous previews
+        mediaGrid.innerHTML = '';
+        
+        // Create preview for each file
+        files.forEach((file, index) => {
+            const col = document.createElement('div');
+            col.className = 'col-6 col-md-4 col-lg-3 mb-2';
+            
+            const card = document.createElement('div');
+            card.className = 'card h-100';
+            card.style.maxHeight = '120px';
+            card.style.overflow = 'hidden';
+            
+            const cardBody = document.createElement('div');
+            cardBody.className = 'card-body d-flex align-items-center justify-content-center p-1 position-relative';
+            cardBody.style.height = '120px';
+            
+            if (file.type.startsWith('image/')) {
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(file);
+                img.style.width = '100%';
+                img.style.height = '100%';
+                img.style.objectFit = 'cover';
+                img.className = 'rounded';
+                cardBody.appendChild(img);
+            } else if (file.type.startsWith('video/')) {
+                const video = document.createElement('video');
+                video.src = URL.createObjectURL(file);
+                video.style.width = '100%';
+                video.style.height = '100%';
+                video.style.objectFit = 'cover';
+                video.className = 'rounded';
+                cardBody.appendChild(video);
+            } else {
+                const icon = document.createElement('i');
+                icon.className = 'fas fa-file fa-lg text-muted';
+                cardBody.appendChild(icon);
+            }
+            
+            // Add remove button
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'btn btn-sm btn-danger position-absolute';
+            removeBtn.style.top = '2px';
+            removeBtn.style.right = '2px';
+            removeBtn.innerHTML = '<i class="fas fa-times"></i>';
+            removeBtn.onclick = () => removeBulkMediaFile(index);
+            
+            card.style.position = 'relative';
+            card.appendChild(cardBody);
+            card.appendChild(removeBtn);
+            
+            // Add filename
+            const fileName = document.createElement('div');
+            fileName.className = 'card-footer p-1 text-center small text-truncate';
+            fileName.style.fontSize = '10px';
+            fileName.textContent = file.name;
+            card.appendChild(fileName);
+            
+            col.appendChild(card);
+            mediaGrid.appendChild(col);
+        });
+    }
+}
+
+function removeBulkMediaFile(index) {
+    const input = document.getElementById('media_files');
+    const files = Array.from(input.files);
+    
+    // Create new FileList without the removed file
+    const dt = new DataTransfer();
+    files.forEach((file, i) => {
+        if (i !== index) {
+            dt.items.add(file);
+        }
+    });
+    
+    input.files = dt.files;
+    
+    // Update preview
+    if (input.files.length > 0) {
+        previewBulkMedia(input);
+    } else {
+        removeBulkMedia();
+    }
+}
+
+function removeBulkMedia() {
+    const input = document.getElementById('media_files');
+    const preview = document.getElementById('bulkMediaPreview');
+    const messageField = document.getElementById('message');
+    const mediaGrid = document.getElementById('bulkMediaGrid');
+    
+    input.value = '';
+    preview.style.display = 'none';
+    
+    // Clean up preview content
+    mediaGrid.innerHTML = '';
+}
+</script>
+
+{% endblock %}

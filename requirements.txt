@@ -1,0 +1,10 @@
+Flask==3.0.0
+Werkzeug==3.0.1
+requests==2.31.0
+qrcode[pil]==7.4.2
+Flask-Limiter==3.5.0
+gunicorn==21.2.0
+python-dotenv==1.0.0
+
+# Additional dependencies for restructured app
+redis==5.0.1

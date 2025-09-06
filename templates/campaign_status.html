@@ -1,0 +1,215 @@
+{% extends "base_simple.html" %}
+
+{% block title %}Campaign Status - WhatsApp Automation{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2"><i class="fas fa-chart-line"></i> Campaign Status</h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <a href="{{ url_for('campaigns.bulk_campaign') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Bulk Send
+            </a>
+        </div>
+    </div>
+
+    <!-- Campaign Progress -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-tasks"></i> Campaign Progress</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between">
+                            <span id="progress-text">Loading...</span>
+                            <span id="eta-text"></span>
+                        </div>
+                        <div class="progress" style="height: 25px;">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                 id="progress-bar" 
+                                 role="progressbar" 
+                                 style="width: 0%">0%</div>
+                        </div>
+                    </div>
+                    
+                    <div class="row text-center">
+                        <div class="col-md-3">
+                            <div class="card bg-primary text-white">
+                                <div class="card-body">
+                                    <h3 id="total-count">0</h3>
+                                    <p class="card-text">Total Messages</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-info text-white">
+                                <div class="card-body">
+                                    <h3 id="processed-count">0</h3>
+                                    <p class="card-text">Processed</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-success text-white">
+                                <div class="card-body">
+                                    <h3 id="sent-count">0</h3>
+                                    <p class="card-text">Sent</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-danger text-white">
+                                <div class="card-body">
+                                    <h3 id="failed-count">0</h3>
+                                    <p class="card-text">Failed</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3 text-center">
+                        <div class="alert alert-info" id="status-alert">
+                            <i class="fas fa-info-circle"></i> <span id="status-message">Checking campaign status...</span>
+                        </div>
+                        
+                        <button class="btn btn-warning" id="stop-campaign" style="display: none;">
+                            <i class="fas fa-stop"></i> Stop Campaign
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Real-time Logs -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-list"></i> Recent Activity</h5>
+                </div>
+                <div class="card-body">
+                    <div id="activity-log" style="max-height: 300px; overflow-y: auto;">
+                        <p class="text-muted">Campaign activity will appear here...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let campaignInterval;
+let lastProcessed = 0;
+
+function updateCampaignStatus() {
+    fetch('/api/campaign_progress')
+        .then(response => response.json())
+        .then(data => {
+            // Update progress bar
+            const percentage = data.percentage || 0;
+            const progressBar = document.getElementById('progress-bar');
+            progressBar.style.width = percentage + '%';
+            progressBar.textContent = percentage + '%';
+            
+            // Update counters
+            document.getElementById('total-count').textContent = data.total || 0;
+            document.getElementById('processed-count').textContent = data.processed || 0;
+            document.getElementById('sent-count').textContent = data.sent || 0;
+            document.getElementById('failed-count').textContent = data.failed || 0;
+            
+            // Update progress text
+            const progressText = document.getElementById('progress-text');
+            progressText.textContent = `${data.processed || 0} of ${data.total || 0} messages processed`;
+            
+            // Update ETA
+            const etaText = document.getElementById('eta-text');
+            if (data.eta && data.eta > 0 && data.status === 'running') {
+                const minutes = Math.floor(data.eta / 60);
+                const seconds = Math.floor(data.eta % 60);
+                etaText.textContent = `ETA: ${minutes}m ${seconds}s`;
+            } else {
+                etaText.textContent = '';
+            }
+            
+            // Update status message
+            const statusMessage = document.getElementById('status-message');
+            const statusAlert = document.getElementById('status-alert');
+            const stopButton = document.getElementById('stop-campaign');
+            
+            if (data.status === 'running') {
+                statusMessage.textContent = 'Campaign is running...';
+                statusAlert.className = 'alert alert-info';
+                stopButton.style.display = 'inline-block';
+                
+                // Update progress bar animation
+                if (percentage < 100) {
+                    progressBar.classList.add('progress-bar-animated');
+                }
+            } else if (data.status === 'completed') {
+                statusMessage.textContent = 'Campaign completed successfully!';
+                statusAlert.className = 'alert alert-success';
+                stopButton.style.display = 'none';
+                progressBar.classList.remove('progress-bar-animated');
+                
+                // Stop polling when complete
+                if (campaignInterval) {
+                    clearInterval(campaignInterval);
+                }
+            } else {
+                statusMessage.textContent = 'No active campaign';
+                statusAlert.className = 'alert alert-secondary';
+                stopButton.style.display = 'none';
+                progressBar.classList.remove('progress-bar-animated');
+            }
+            
+            // Add activity log entries for new messages
+            if (data.processed > lastProcessed) {
+                const newMessages = data.processed - lastProcessed;
+                addActivityLogEntry(`${newMessages} message(s) processed. Total: ${data.sent} sent, ${data.failed} failed.`);
+                lastProcessed = data.processed;
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching campaign status:', error);
+        });
+}
+
+function addActivityLogEntry(message) {
+    const activityLog = document.getElementById('activity-log');
+    const now = new Date().toLocaleTimeString();
+    const entry = document.createElement('div');
+    entry.className = 'alert alert-light py-2 mb-2';
+    entry.innerHTML = `<small class="text-muted">${now}</small> - ${message}`;
+    
+    // Add to top of log
+    if (activityLog.children.length > 0 && activityLog.children[0].classList.contains('text-muted')) {
+        activityLog.removeChild(activityLog.children[0]);
+    }
+    activityLog.insertBefore(entry, activityLog.firstChild);
+    
+    // Keep only last 10 entries
+    while (activityLog.children.length > 10) {
+        activityLog.removeChild(activityLog.lastChild);
+    }
+}
+
+// Start polling for updates
+document.addEventListener('DOMContentLoaded', function() {
+    updateCampaignStatus(); // Initial load
+    campaignInterval = setInterval(updateCampaignStatus, 2000); // Update every 2 seconds
+    
+    addActivityLogEntry('Campaign status monitoring started');
+});
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', function() {
+    if (campaignInterval) {
+        clearInterval(campaignInterval);
+    }
+});
+</script>
+
+{% endblock %}

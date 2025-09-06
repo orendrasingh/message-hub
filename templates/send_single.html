@@ -1,0 +1,453 @@
+{% extends "base_simple.html" %}
+
+{% block title %}Send Single Message - WhatsApp Automation{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2"><i class="fas fa-paper-plane"></i> Send Single Message</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('campaigns.bulk_campaign') }}" class="btn btn-success">
+            <i class="fas fa-broadcast-tower"></i> Bulk Campaign
+        </a>
+    </div>
+</div>
+
+{% if message %}
+    <div class="alert alert-{{ 'success' if success else 'danger' }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+{% endif %}
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-mobile-alt"></i> Send Message</h5>
+            </div>
+            <div class="card-body">
+                {% if not connection.connected %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        WhatsApp is not connected. <a href="{{ url_for('main.connect') }}">Connect now</a> to send messages.
+                    </div>
+                {% endif %}
+
+                <form method="POST" id="sendForm" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="phone_number" class="form-label">
+                            <i class="fas fa-phone"></i> Phone Number
+                        </label>
+                        <input type="text" class="form-control" id="phone_number" name="phone_number" 
+                               value="{{ request.form.phone_number if request.form.phone_number else '' }}"
+                               placeholder="+1234567890" required>
+                        <div class="form-text">
+                            Include country code (e.g., +91 for India, +1 for US)
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            <i class="fas fa-user"></i> Or Select from Contacts
+                        </label>
+                        <select class="form-select" id="contact_select" onchange="selectContact()">
+                            <option value="">Choose a contact...</option>
+                            {% for contact in contacts %}
+                                <option value="{{ contact.phone }}" data-name="{{ contact.name }}">
+                                    {{ contact.name or 'Unknown' }} ({{ contact.phone }})
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Media Upload Section -->
+                    <div class="mb-3">
+                        <label for="media_files" class="form-label">
+                            <i class="fas fa-image"></i> Attach Media (Optional)
+                        </label>
+                        <div class="border rounded p-3" style="border: 2px dashed #ccc; background-color: #f8f9fa;">
+                            <input type="file" class="form-control" id="media_files" name="media_files" 
+                                   accept="image/*,video/*" multiple onchange="previewMultipleMedia(this)"
+                                   style="cursor: pointer;">
+                            <div class="text-center mt-2">
+                                <i class="fas fa-cloud-upload-alt fa-2x text-muted"></i>
+                                <p class="mt-2 mb-1"><strong>Click to select multiple files</strong></p>
+                                <small class="text-muted">Hold Ctrl (Windows) or Cmd (Mac) to select multiple files</small>
+                            </div>
+                        </div>
+                        <div class="form-text mt-2">
+                            Supported formats: Images (PNG, JPG, GIF, WebP) up to 10MB, Videos (MP4, AVI, MOV) up to 50MB
+                            <br><strong>Multiple files supported</strong> - All selected media will be sent together
+                        </div>
+                        
+                        <!-- Media Preview -->
+                        <div id="mediaPreview" class="mt-2" style="display: none;">
+                            <div class="border rounded p-2">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span id="mediaFileName" class="text-muted"></span>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeAllMedia()">
+                                        <i class="fas fa-times"></i> Remove All
+                                    </button>
+                                </div>
+                                <div id="mediaPreviewContent" class="mt-2" style="max-height: 300px; overflow-y: auto;">
+                                    <div class="row g-2" id="mediaGrid" style="margin: 0;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="message" class="form-label">
+                            <i class="fas fa-comment"></i> Message <span class="text-muted">(Optional if media is attached)</span>
+                        </label>
+                        <textarea class="form-control" id="message" name="message" rows="6" 
+                                  placeholder="Type your message here or leave empty to send media only...">{{ request.form.message if request.form.message else '' }}</textarea>
+                        <div class="form-text">
+                            <span id="charCount">0</span> characters. When media is attached, this becomes the caption.
+                        </div>
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-success btn-lg" {{ 'disabled' if not connection.connected else '' }}>
+                            <i class="fas fa-paper-plane"></i> Send Message
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <!-- Message Tips -->
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-lightbulb"></i> Message Tips</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled">
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success"></i>
+                        Keep messages personal and relevant
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success"></i>
+                        Avoid sending promotional content excessively
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success"></i>
+                        Test with your own number first
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success"></i>
+                        Use emojis sparingly for better readability
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success"></i>
+                        Respect recipient's privacy and preferences
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Recent Messages -->
+        {% if recent_messages %}
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5><i class="fas fa-history"></i> Recent Messages</h5>
+            </div>
+            <div class="card-body">
+                {% for msg in recent_messages %}
+                <div class="border-bottom pb-2 mb-2">
+                    <small class="text-muted">{{ msg.timestamp[:16] }}</small>
+                    <p class="mb-1"><strong>To:</strong> {{ msg.phone_number }}</p>
+                    <p class="mb-1 text-truncate">{{ msg.message[:50] }}{% if msg.message|length > 50 %}...{% endif %}</p>
+                    <span class="badge bg-{{ 'success' if msg.status == 'sent' else 'danger' }}">
+                        {{ msg.status }}
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Message Templates -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5><i class="fas fa-clipboard-list"></i> Quick Templates</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-primary btn-sm" onclick="useTemplate('greeting')">
+                        <i class="fas fa-hand-wave"></i> Greeting
+                    </button>
+                    <button class="btn btn-outline-primary btn-sm" onclick="useTemplate('follow_up')">
+                        <i class="fas fa-phone"></i> Follow Up
+                    </button>
+                    <button class="btn btn-outline-primary btn-sm" onclick="useTemplate('thank_you')">
+                        <i class="fas fa-heart"></i> Thank You
+                    </button>
+                    <button class="btn btn-outline-primary btn-sm" onclick="useTemplate('reminder')">
+                        <i class="fas fa-bell"></i> Reminder
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Message Preview -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5><i class="fas fa-eye"></i> Preview</h5>
+            </div>
+            <div class="card-body">
+                <div class="whatsapp-preview">
+                    <div class="message-bubble">
+                        <div id="messagePreview">Type a message to see preview...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sending Modal -->
+<div class="modal fade" id="sendingModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-paper-plane"></i> Sending Message</h5>
+            </div>
+            <div class="modal-body text-center">
+                <div class="spinner-border text-success" role="status">
+                    <span class="visually-hidden">Sending...</span>
+                </div>
+                <p class="mt-3">Sending your message, please wait...</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Character counter
+document.getElementById('message').addEventListener('input', function() {
+    document.getElementById('charCount').textContent = this.value.length;
+});
+
+// Contact selection
+function selectContact() {
+    const select = document.getElementById('contact_select');
+    const phoneInput = document.getElementById('phone_number');
+    const selectedOption = select.options[select.selectedIndex];
+    
+    if (selectedOption.value) {
+        phoneInput.value = selectedOption.value;
+    }
+}
+
+// Media upload functionality for multiple files
+function previewMultipleMedia(input) {
+    const files = Array.from(input.files);
+    const preview = document.getElementById('mediaPreview');
+    const fileName = document.getElementById('mediaFileName');
+    const mediaGrid = document.getElementById('mediaGrid');
+    const messageField = document.getElementById('message');
+    
+    if (files.length > 0) {
+        fileName.textContent = `${files.length} file(s) selected: ${files.map(f => f.name).join(', ')}`;
+        preview.style.display = 'block';
+        
+        // Remove required attribute from message field
+        messageField.removeAttribute('required');
+        
+        // Clear previous previews
+        mediaGrid.innerHTML = '';
+        
+        // Create preview for each file
+        files.forEach((file, index) => {
+            const col = document.createElement('div');
+            col.className = 'col-6 col-md-4 col-lg-3 mb-2';
+            
+            const card = document.createElement('div');
+            card.className = 'card h-100';
+            card.style.maxHeight = '120px';
+            card.style.overflow = 'hidden';
+            
+            const cardBody = document.createElement('div');
+            cardBody.className = 'card-body d-flex align-items-center justify-content-center p-1 position-relative';
+            cardBody.style.height = '120px';
+            
+            if (file.type.startsWith('image/')) {
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(file);
+                img.style.width = '100%';
+                img.style.height = '100%';
+                img.style.objectFit = 'cover';
+                img.className = 'rounded';
+                cardBody.appendChild(img);
+            } else if (file.type.startsWith('video/')) {
+                const video = document.createElement('video');
+                video.src = URL.createObjectURL(file);
+                video.style.width = '100%';
+                video.style.height = '100%';
+                video.style.objectFit = 'cover';
+                video.className = 'rounded';
+                cardBody.appendChild(video);
+            } else {
+                const icon = document.createElement('i');
+                icon.className = 'fas fa-file fa-2x text-muted';
+                cardBody.appendChild(icon);
+            }
+            
+            // Add remove button
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'btn btn-sm btn-danger position-absolute';
+            removeBtn.style.top = '5px';
+            removeBtn.style.right = '5px';
+            removeBtn.innerHTML = '<i class="fas fa-times"></i>';
+            removeBtn.onclick = () => removeMediaFile(index);
+            
+            card.style.position = 'relative';
+            card.appendChild(cardBody);
+            card.appendChild(removeBtn);
+            
+            // Add filename
+            const fileName = document.createElement('div');
+            fileName.className = 'card-footer p-1 text-center small text-truncate';
+            fileName.textContent = file.name;
+            card.appendChild(fileName);
+            
+            col.appendChild(card);
+            mediaGrid.appendChild(col);
+        });
+    }
+}
+
+function removeMediaFile(index) {
+    const input = document.getElementById('media_files');
+    const files = Array.from(input.files);
+    
+    // Create new FileList without the removed file
+    const dt = new DataTransfer();
+    files.forEach((file, i) => {
+        if (i !== index) {
+            dt.items.add(file);
+        }
+    });
+    
+    input.files = dt.files;
+    
+    // Update preview
+    if (input.files.length > 0) {
+        previewMultipleMedia(input);
+    } else {
+        removeAllMedia();
+    }
+}
+
+function removeAllMedia() {
+    const input = document.getElementById('media_files');
+    const preview = document.getElementById('mediaPreview');
+    const messageField = document.getElementById('message');
+    const mediaGrid = document.getElementById('mediaGrid');
+    
+    input.value = '';
+    preview.style.display = 'none';
+    
+    // Clean up preview content
+    mediaGrid.innerHTML = '';
+    
+    // Make message required again if no media
+    messageField.setAttribute('required', 'required');
+}
+
+// Message templates
+const templates = {
+    greeting: "Hello! Hope you're doing well. 😊",
+    follow_up: "Hi! Just following up on our previous conversation. Please let me know if you have any questions.",
+    thank_you: "Thank you for your time and consideration. Looking forward to hearing from you soon! 🙏",
+    reminder: "Gentle reminder about our upcoming meeting. Please confirm your availability."
+};
+
+function useTemplate(type) {
+    const messageArea = document.getElementById('message');
+    messageArea.value = templates[type];
+    messageArea.focus();
+    
+    // Trigger character count update
+    const event = new Event('input');
+    messageArea.dispatchEvent(event);
+}
+
+// Message preview
+function updatePreview() {
+    const message = document.getElementById('message').value;
+    const preview = document.getElementById('messagePreview');
+    
+    if (message.trim()) {
+        preview.textContent = message;
+    } else {
+        preview.textContent = 'Type a message to see preview...';
+    }
+}
+
+// Form submission with loading modal
+document.getElementById('sendForm').addEventListener('submit', function(e) {
+    const modal = new bootstrap.Modal(document.getElementById('sendingModal'));
+    modal.show();
+});
+
+// Auto-format phone number
+document.getElementById('phone_number').addEventListener('input', function() {
+    let value = this.value.replace(/\D/g, ''); // Remove non-digits
+    
+    // Add + if not present and has digits
+    if (value && !this.value.startsWith('+')) {
+        this.value = '+' + value;
+    }
+});
+
+// Initialize preview
+updatePreview();
+</script>
+
+<style>
+.whatsapp-preview {
+    background: linear-gradient(to bottom, #075e54, #128c7e);
+    padding: 20px;
+    border-radius: 10px;
+}
+
+.message-bubble {
+    background: #dcf8c6;
+    padding: 10px 15px;
+    border-radius: 18px;
+    max-width: 250px;
+    margin-left: auto;
+    margin-right: 0;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    position: relative;
+}
+
+.message-bubble:after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    right: -8px;
+    width: 0;
+    height: 0;
+    border: 8px solid transparent;
+    border-bottom-color: #dcf8c6;
+    border-right: 0;
+    margin-bottom: -8px;
+}
+
+#messagePreview {
+    font-size: 14px;
+    line-height: 1.4;
+    word-wrap: break-word;
+    color: #333;
+}
+</style>
+{% endblock %}

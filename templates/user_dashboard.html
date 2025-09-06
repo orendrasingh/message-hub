@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - WhatsApp Automation</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .navbar {
+            background: rgba(255, 255, 255, 0.1) !important;
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .navbar-brand, .navbar-nav .nav-link {
+            color: white !important;
+        }
+        .dashboard-container {
+            margin-top: 2rem;
+        }
+        .stat-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        .stat-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+            margin-bottom: 1rem;
+        }
+        .stat-icon.success { background: linear-gradient(135deg, #28a745 0%, #20c997 100%); }
+        .stat-icon.primary { background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); }
+        .stat-icon.warning { background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%); }
+        .stat-icon.info { background: linear-gradient(135deg, #17a2b8 0%, #138496 100%); }
+        
+        .action-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .btn-action {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            border: none;
+            color: white;
+            padding: 12px 25px;
+            border-radius: 25px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn-action:hover {
+            background: linear-gradient(135deg, #20c997 0%, #28a745 100%);
+            color: white;
+            transform: translateY(-2px);
+        }
+        .btn-secondary-action {
+            background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        .btn-secondary-action:hover {
+            background: linear-gradient(135deg, #5a6268 0%, #6c757d 100%);
+            color: white;
+            transform: translateY(-2px);
+        }
+        .connection-status {
+            padding: 1rem;
+            border-radius: 10px;
+            margin-bottom: 2rem;
+        }
+        .status-connected {
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+            border: 1px solid #00b894;
+            color: #155724;
+        }
+        .status-disconnected {
+            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+            border: 1px solid #e74c3c;
+            color: #721c24;
+        }
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .quick-action-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 2rem 1rem;
+            border-radius: 15px;
+            text-align: center;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            backdrop-filter: blur(10px);
+        }
+        .quick-action-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-5px);
+        }
+        .recent-activity {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="fab fa-whatsapp me-2"></i>
+                WhatsApp Automation
+            </a>
+            <div class="navbar-nav ms-auto">
+                <span class="navbar-text me-3">Welcome, {{ user.name }}!</span>
+                <a class="nav-link" href="{{ url_for('auth.logout') }}">
+                    <i class="fas fa-sign-out-alt me-1"></i>Logout
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container dashboard-container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Connection Status -->
+        <div class="connection-status {% if user.whatsapp_connected %}status-connected{% else %}status-disconnected{% endif %}">
+            <div class="d-flex align-items-center">
+                {% if user.whatsapp_connected %}
+                    <i class="fas fa-check-circle fa-2x me-3"></i>
+                    <div>
+                        <h5 class="mb-1">WhatsApp Connected</h5>
+                        <p class="mb-0">Your WhatsApp is connected and ready for automation</p>
+                    </div>
+                {% else %}
+                    <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
+                    <div class="flex-grow-1">
+                        <h5 class="mb-1">WhatsApp Not Connected</h5>
+                        <p class="mb-0">Please connect your WhatsApp to start using automation features</p>
+                    </div>
+                    <a href="{{ url_for('main.connect_whatsapp') }}" class="btn btn-action">
+                        <i class="fas fa-link me-2"></i>Connect Now
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="row">
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-icon success">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <h3 class="mb-1">{{ total_contacts }}</h3>
+                    <p class="text-muted mb-0">Total Contacts</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-icon primary">
+                        <i class="fas fa-paper-plane"></i>
+                    </div>
+                    <h3 class="mb-1">0</h3>
+                    <p class="text-muted mb-0">Messages Sent</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-icon warning">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <h3 class="mb-1">0</h3>
+                    <p class="text-muted mb-0">Pending Messages</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-icon info">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <h3 class="mb-1">0%</h3>
+                    <p class="text-muted mb-0">Delivery Rate</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="quick-actions">
+            <a href="{{ url_for('campaigns.bulk_send') }}" class="quick-action-btn">
+                <i class="fas fa-paper-plane fa-2x mb-3"></i>
+                <h5>Send Bulk Messages</h5>
+                <p class="mb-0">Send messages to multiple contacts</p>
+            </a>
+            <a href="#" class="quick-action-btn" data-bs-toggle="modal" data-bs-target="#addContactModal">
+                <i class="fas fa-user-plus fa-2x mb-3"></i>
+                <h5>Add Contact</h5>
+                <p class="mb-0">Add a new contact manually</p>
+            </a>
+            <a href="#" class="quick-action-btn" data-bs-toggle="modal" data-bs-target="#uploadCSVModal">
+                <i class="fas fa-upload fa-2x mb-3"></i>
+                <h5>Import CSV</h5>
+                <p class="mb-0">Upload contacts from CSV file</p>
+            </a>
+            <a href="{{ url_for('main.connect_whatsapp') }}" class="quick-action-btn">
+                <i class="fas fa-qrcode fa-2x mb-3"></i>
+                <h5>QR Code</h5>
+                <p class="mb-0">View connection QR code</p>
+            </a>
+        </div>
+
+        <div class="row">
+            <!-- Contact List -->
+            <div class="col-md-8">
+                <div class="action-card">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h4><i class="fas fa-users me-2"></i>Your Contacts</h4>
+                        <div>
+                            <button class="btn btn-secondary-action me-2" data-bs-toggle="modal" data-bs-target="#uploadCSVModal">
+                                <i class="fas fa-upload me-1"></i>Import CSV
+                            </button>
+                            <button class="btn btn-action" data-bs-toggle="modal" data-bs-target="#addContactModal">
+                                <i class="fas fa-plus me-1"></i>Add Contact
+                            </button>
+                        </div>
+                    </div>
+                    
+                    {% if contacts %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Phone</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for contact in contacts %}
+                                    <tr>
+                                        <td>{{ contact[2] }}</td> <!-- name -->
+                                        <td>{{ contact[1] }}</td> <!-- phone -->
+                                        <td>
+                                            <span class="badge bg-success">Active</span>
+                                        </td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No contacts yet</h5>
+                            <p class="text-muted">Add your first contact to get started with bulk messaging</p>
+                            <button class="btn btn-action" data-bs-toggle="modal" data-bs-target="#addContactModal">
+                                <i class="fas fa-plus me-2"></i>Add First Contact
+                            </button>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Recent Activity -->
+            <div class="col-md-4">
+                <div class="recent-activity">
+                    <h4 class="mb-3"><i class="fas fa-history me-2"></i>Recent Activity</h4>
+                    <div class="text-center py-4">
+                        <i class="fas fa-clock fa-2x text-muted mb-3"></i>
+                        <p class="text-muted">No recent activity</p>
+                        <small class="text-muted">Your message history will appear here</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Contact Modal -->
+    <div class="modal fade" id="addContactModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add New Contact</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="POST" action="{{ url_for('contacts.add_contact') }}">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Name</label>
+                            <input type="text" class="form-control" id="name" name="name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="phone" class="form-label">Phone Number</label>
+                            <input type="tel" class="form-control" id="phone" name="phone" required 
+                                   placeholder="e.g., +1234567890">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-action">Add Contact</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload CSV Modal -->
+    <div class="modal fade" id="uploadCSVModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Import Contacts from CSV</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="POST" action="{{ url_for('contacts.import_contacts') }}" enctype="multipart/form-data">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="csv_file" class="form-label">Choose CSV File</label>
+                            <input type="file" class="form-control" id="csv_file" name="csv_file" accept=".csv" required>
+                        </div>
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>CSV Format:</strong> Your CSV file should have columns named 'name' and 'phone'.
+                        </div>
+                        <div class="mb-3">
+                            <small class="text-muted">
+                                Example CSV format:<br>
+                                <code>name,phone<br>John Doe,+1234567890<br>Jane Smith,+0987654321</code>
+                            </small>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-action">Import Contacts</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

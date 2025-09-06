@@ -1,0 +1,202 @@
+{% extends "base_simple.html" %}
+
+{% block title %}Upload Contacts - WhatsApp Automation{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2"><i class="fas fa-upload"></i> Upload Contacts</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('contacts.download_sample_csv') }}" class="btn btn-outline-primary">
+            <i class="fas fa-download"></i> Download Sample CSV
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-file-csv"></i> Upload CSV File</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="csv_file" class="form-label">
+                            <i class="fas fa-upload"></i> Select CSV File
+                        </label>
+                        <input type="file" class="form-control" id="csv_file" name="csv_file" accept=".csv" required>
+                        <div class="form-text">
+                            Choose a CSV file with columns: name, phone (or phone_number)
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-info-circle"></i> CSV Format Requirements:</h6>
+                        <ul class="mb-0">
+                            <li><strong>Required:</strong> phone (or phone_number) column</li>
+                            <li><strong>Optional:</strong> name column</li>
+                            <li><strong>Phone Format:</strong> +91XXXXXXXXXX or 10-digit number</li>
+                            <li><strong>Example:</strong> name,phone<br>John Doe,+919876543210</li>
+                        </ul>
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-success btn-lg" id="uploadBtn">
+                            <i class="fas fa-upload"></i> Upload & Import Contacts
+                        </button>
+                    </div>
+                </form>
+                
+                <!-- Progress Bar -->
+                <div id="progressContainer" class="mt-4" style="display: none;">
+                    <h6>Import Progress</h6>
+                    <div class="progress mb-2">
+                        <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" 
+                             role="progressbar" style="width: 0%"></div>
+                    </div>
+                    <small id="progressText" class="text-muted">Preparing...</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-bar"></i> Current Statistics</h5>
+            </div>
+            <div class="card-body text-center">
+                <div class="row">
+                    <div class="col-6">
+                        <h3 class="text-primary">{{ stats.total }}</h3>
+                        <small>Total Contacts</small>
+                    </div>
+                    <div class="col-6">
+                        <h3 class="text-warning">{{ stats.pending }}</h3>
+                        <small>Pending</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5><i class="fas fa-question-circle"></i> Need Help?</h5>
+            </div>
+            <div class="card-body">
+                <ol>
+                    <li>Download the sample CSV file</li>
+                    <li>Add your contacts with phone numbers</li>
+                    <li>Upload the CSV file</li>
+                    <li>Start sending bulk messages!</li>
+                </ol>
+                <a href="{{ url_for('contacts.download_sample_csv') }}" class="btn btn-outline-primary btn-sm">
+                    <i class="fas fa-download"></i> Get Sample File
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Check for import progress on page load
+document.addEventListener('DOMContentLoaded', function() {
+    checkImportProgress();
+});
+
+// Handle form submission
+document.querySelector('form').addEventListener('submit', function() {
+    document.getElementById('uploadBtn').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
+    document.getElementById('uploadBtn').disabled = true;
+    
+    setTimeout(function() {
+        checkImportProgress();
+    }, 1000);
+});
+
+function checkImportProgress() {
+    fetch('/api/import-progress')
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'processing') {
+                showProgress(data);
+                setTimeout(checkImportProgress, 1000); // Check every second
+            } else if (data.status === 'completed') {
+                showCompleted(data);
+                // Stop polling after completion
+                setTimeout(hideProgress, 5000); // Hide after 5 seconds
+            } else if (data.status === 'error') {
+                showError(data);
+                // Stop polling after error
+                setTimeout(hideProgress, 10000); // Hide after 10 seconds
+            } else if (data.status === 'idle') {
+                // Import is not running, stop polling
+                hideProgress();
+            }
+        })
+        .catch(error => {
+            console.error('Error checking progress:', error);
+            // Stop polling on error
+            hideProgress();
+        });
+}
+
+function showProgress(data) {
+    const progressContainer = document.getElementById('progressContainer');
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
+    
+    progressContainer.style.display = 'block';
+    
+    const percentage = data.total > 0 ? (data.current / data.total) * 100 : 0;
+    progressBar.style.width = percentage + '%';
+    progressBar.textContent = Math.round(percentage) + '%';
+    progressText.textContent = data.message;
+    
+    progressBar.className = 'progress-bar progress-bar-striped progress-bar-animated bg-primary';
+}
+
+function showCompleted(data) {
+    const progressContainer = document.getElementById('progressContainer');
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
+    
+    progressContainer.style.display = 'block';
+    
+    progressBar.style.width = '100%';
+    progressBar.textContent = '100%';
+    progressText.textContent = data.message;
+    
+    progressBar.className = 'progress-bar bg-success';
+    
+    // Re-enable button
+    document.getElementById('uploadBtn').innerHTML = '<i class="fas fa-upload"></i> Upload & Import Contacts';
+    document.getElementById('uploadBtn').disabled = false;
+    
+    // Refresh page to show new stats
+    setTimeout(() => window.location.reload(), 2000);
+}
+
+function showError(data) {
+    const progressContainer = document.getElementById('progressContainer');
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
+    
+    progressContainer.style.display = 'block';
+    
+    progressBar.style.width = '100%';
+    progressBar.textContent = 'Error';
+    progressText.textContent = data.message;
+    
+    progressBar.className = 'progress-bar bg-danger';
+    
+    // Re-enable button
+    document.getElementById('uploadBtn').innerHTML = '<i class="fas fa-upload"></i> Upload & Import Contacts';
+    document.getElementById('uploadBtn').disabled = false;
+}
+
+function hideProgress() {
+    document.getElementById('progressContainer').style.display = 'none';
+}
+</script>
+{% endblock %}
