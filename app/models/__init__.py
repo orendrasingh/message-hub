@@ -40,6 +40,11 @@ class DatabaseManager:
     
     def execute_query(self, query: str, params: tuple = ()) -> List[Dict[str, Any]]:
         """Execute query and return results"""
+        # Basic SQL injection detection (params should always be used)
+        if params is None or (len(params) == 0 and any(char in query.lower() for char in ['%', "'", '"', ';', '--'])):
+            import logging
+            logging.warning(f"Potentially unsafe SQL query detected: {query}")
+        
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query, params)

@@ -10,6 +10,7 @@ from app.services.auth import AuthService
 from app.services.email import EmailService
 from app.utils.auth import anonymous_required, get_current_user
 from app.utils.validators import validate_email, validate_password, sanitize_input
+from app.utils.security import safe_redirect_url
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -54,6 +55,8 @@ def login():
         user = auth_service.authenticate_user(email, password)
         
         if user:
+            # Log successful login
+            current_app.logger.info(f"Successful login for user: {email} from IP: {request.remote_addr}")
             # Create session
             session['user_id'] = user.id
             session['user_email'] = user.email
@@ -80,12 +83,12 @@ def login():
             elif not user.whatsapp_connected:
                 return redirect(url_for('main.connect_whatsapp'))
             else:
-                # Check for next parameter
+                # Check for next parameter with safe redirect
                 next_page = request.args.get('next')
-                if next_page:
-                    return redirect(next_page)
-                return redirect(url_for('main.dashboard'))
+                return redirect(safe_redirect_url(next_page, 'main.dashboard'))
         else:
+            # Log failed login attempt
+            current_app.logger.warning(f"Failed login attempt for email: {email} from IP: {request.remote_addr}")
             flash('Invalid email or password', 'error')
     
     return render_template('login.html')

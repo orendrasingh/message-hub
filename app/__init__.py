@@ -35,6 +35,9 @@ def create_app(config_name=None):
     # Initialize extensions
     _init_extensions(app)
     
+    # Setup logging
+    _setup_logging(app)
+    
     # Register blueprints
     _register_blueprints(app)
     
@@ -82,6 +85,28 @@ def _register_context_processors(app):
     """Register template context processors"""
     from app.utils.context_processors import register_context_processors
     register_context_processors(app)
+
+
+def _setup_logging(app):
+    """Setup application logging"""
+    if not app.debug and not app.testing:
+        import logging
+        from logging.handlers import RotatingFileHandler
+        
+        # Create logs directory
+        if not os.path.exists('logs'):
+            os.mkdir('logs')
+        
+        # Setup file handler with rotation
+        file_handler = RotatingFileHandler('logs/whatsapp_app.log', maxBytes=10240000, backupCount=10)
+        file_handler.setFormatter(logging.Formatter(
+            '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
+        ))
+        file_handler.setLevel(logging.INFO)
+        app.logger.addHandler(file_handler)
+        
+        app.logger.setLevel(logging.INFO)
+        app.logger.info('WhatsApp Message Hub startup')
 
 
 def _add_security_headers(app):

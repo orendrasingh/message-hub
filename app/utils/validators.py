@@ -71,11 +71,34 @@ def validate_csv_file(filename: str) -> bool:
 
 
 def sanitize_csv_content(content: str) -> str:
-    """Sanitize CSV content"""
+    """Sanitize CSV content to prevent CSV injection and XSS"""
+    if not content:
+        return ""
+    
     # Remove any potential script tags or harmful content
     content = re.sub(r'<script.*?</script>', '', content, flags=re.IGNORECASE | re.DOTALL)
     content = re.sub(r'<.*?>', '', content)  # Remove any HTML tags
-    return content
+    
+    # Prevent CSV injection by sanitizing cells that start with dangerous characters
+    lines = content.split('\n')
+    sanitized_lines = []
+    
+    for line in lines:
+        if line.strip():
+            # Split by comma and sanitize each cell
+            cells = line.split(',')
+            sanitized_cells = []
+            
+            for cell in cells:
+                cell = cell.strip(' "\'')  # Remove quotes and spaces
+                # Remove leading dangerous characters that could cause CSV injection
+                if cell.startswith(('=', '+', '-', '@', '\t', '\r')):
+                    cell = "'" + cell  # Prefix with single quote to prevent formula execution
+                sanitized_cells.append(cell)
+            
+            sanitized_lines.append(','.join(sanitized_cells))
+    
+    return '\n'.join(sanitized_lines)
 
 
 def validate_message_template(template: str) -> Dict[str, Any]:

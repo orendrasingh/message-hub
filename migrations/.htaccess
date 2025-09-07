@@ -1,0 +1,22 @@
+# Migrations Directory Security
+
+## This directory should be protected from web access
+
+### Apache (.htaccess)
+```apache
+<Files "*">
+    Require all denied
+</Files>
+```
+
+### Nginx 
+Add to your nginx configuration:
+```nginx
+location /migrations {
+    deny all;
+    return 404;
+}
+```
+
+### Flask Production
+In production, ensure this directory is outside the web root or properly protected.
