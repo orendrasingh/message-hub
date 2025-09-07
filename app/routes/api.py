@@ -80,6 +80,13 @@ def check_connection():
     return check_connection_status()
 
 
+@api_bp.route('/connection_status')
+@login_required
+def connection_status_underscore():
+    """Legacy connection status endpoint with underscore"""
+    return check_connection_status()
+
+
 # Contact management API endpoints
 @api_bp.route('/contacts/edit', methods=['POST'])
 @limiter.limit("60 per minute")

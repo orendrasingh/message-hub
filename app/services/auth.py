@@ -155,13 +155,14 @@ class AuthService:
                     'Content-Type': 'application/json',
                     'apikey': self.evolution_global_key
                 },
-                json={'instanceName': user.evolution_instance_name},
+                json={'instanceName': user.evolution_instance_name, 'integration': 'WHATSAPP-BAILEYS'},
                 timeout=30
             )
             
             if response.status_code == 201:
                 result = response.json()
-                api_key = result.get('hash', {}).get('apikey', '')
+                # Try both old and new API response formats
+                api_key = result.get('hash', '') or result.get('instance', {}).get('token', '')
                 return {'success': True, 'api_key': api_key}
             else:
                 return {'success': False, 'error': f"HTTP {response.status_code}: {response.text}"}

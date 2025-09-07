@@ -22,7 +22,7 @@ class WhatsAppService:
         try:
             response = requests.get(
                 f"{self.evolution_api_url}/instance/connect/{user.evolution_instance_name}",
-                headers={'apikey': self.evolution_global_key},
+                headers={'apikey': user.evolution_api_key or self.evolution_global_key},
                 timeout=30
             )
             
@@ -101,11 +101,11 @@ class WhatsAppService:
                 f"{self.evolution_api_url}/message/sendText/{user.evolution_instance_name}",
                 headers={
                     'Content-Type': 'application/json',
-                    'apikey': self.evolution_global_key
+                    'apikey': user.evolution_api_key or self.evolution_global_key
                 },
                 json={
                     'number': phone,
-                    'textMessage': {'text': message}
+                    'text': message
                 },
                 timeout=30
             )
@@ -146,20 +146,16 @@ class WhatsAppService:
             if media_type.lower() in ['image', 'photo', 'img']:
                 media_payload = {
                     'number': phone,
-                    'mediaMessage': {
-                        'mediatype': 'image',
-                        'media': base64_data,
-                        'caption': caption
-                    }
+                    'mediatype': 'image',
+                    'media': base64_data,
+                    'caption': caption
                 }
             elif media_type.lower() in ['video', 'vid']:
                 media_payload = {
                     'number': phone,
-                    'mediaMessage': {
-                        'mediatype': 'video',
-                        'media': base64_data,
-                        'caption': caption
-                    }
+                    'mediatype': 'video', 
+                    'media': base64_data,
+                    'caption': caption
                 }
             else:
                 return {'success': False, 'error': 'Unsupported media type. Use image or video.'}
@@ -168,7 +164,7 @@ class WhatsAppService:
                 endpoint,
                 headers={
                     'Content-Type': 'application/json',
-                    'apikey': self.evolution_global_key
+                    'apikey': user.evolution_api_key or self.evolution_global_key
                 },
                 json=media_payload,
                 timeout=60  # Longer timeout for media uploads
