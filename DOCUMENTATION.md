@@ -1310,9 +1310,8 @@ We welcome contributions to Message Hub! Here's how to get started:
 
 2. **Set Up Development Environment**
    ```bash
-   git clone https://github.com/yourusername/message-hub.git
+   git clone https://github.com/orendrasingh/message-hub.git
    cd message-hub
-   git remote add upstream https://github.com/original/message-hub.git
    ```
 
 3. **Create Feature Branch**
@@ -1411,7 +1410,7 @@ Message Hub is released under the MIT License. By contributing, you agree that y
 
 For support, bug reports, or feature requests:
 
-- **GitHub Issues**: https://github.com/yourusername/message-hub/issues
+- **GitHub Issues**: https://github.com/orendrasingh/message-hub/issues
 - **Documentation**: This file and inline code comments
 - **Community**: GitHub Discussions
 - **Email**: support@message-hub.com (for enterprise users)
