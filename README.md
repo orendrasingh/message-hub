@@ -60,6 +60,8 @@ EVOLUTION_API_KEY=your-api-key
 
 ### Evolution API Setup
 
+Repo link - https://github.com/EvolutionAPI/evolution-api
+
 1. Install and configure Evolution API
 2. Create an instance for Message Hub
 3. Connect WhatsApp through the app interface
@@ -124,15 +126,15 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🆘 Support
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/message-hub/issues)
+- **Issues**: [GitHub Issues](https://github.com/orendrasingh/message-hub/issues)
 - **Documentation**: [Full Documentation](DOCUMENTATION.md)
 - **Discussions**: [GitHub Discussions](https://github.com/yourusername/message-hub/discussions)
 
 ## 🔗 Links
 
-- [Live Demo](https://demo.message-hub.com) (if available)
+- [Live Demo] - In progress
 - [Evolution API Documentation](https://evolution-api.com)
-- [Project Roadmap](https://github.com/yourusername/message-hub/projects)
+- [Project Roadmap](https://github.com/orendrasingh/message-hub/projects)
 
 ---
 
